@@ -1,0 +1,7 @@
+{
+  "name": "No More Lies (NML)",
+  "description": "A real-time PWA for combating disinformation using AI-powered speech analysis and fact-checking.",
+  "requestFramePermissions": [
+    "microphone"
+  ]
+}
