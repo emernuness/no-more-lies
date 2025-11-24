@@ -1,5 +1,6 @@
 import React from 'react';
 import { FactCheckResult, VerificationStatus } from '../types';
+import { HINT_DOMAINS, GOV_PATTERNS, BLACKLIST } from '../env';
 import { CheckCircle, XCircle, AlertTriangle, HelpCircle, MessageSquare, ExternalLink, Share2, Maximize2, Loader2 } from 'lucide-react';
 
 interface FactCardProps {
@@ -65,6 +66,21 @@ export const FactCard: React.FC<FactCardProps> = ({ result, onClick, onShare }) 
   const config = getStatusConfig(result.status);
   const isPending = result.status === VerificationStatus.PENDING;
 
+  const classifySource = (uri: string) => {
+    try {
+      const host = new URL(uri).hostname.toLowerCase();
+      const isGov = GOV_PATTERNS.some((g) => host.includes(g));
+      if (isGov) return { label: 'Oficial', color: 'text-red-400', bg: 'bg-red-900/30', border: 'border-red-900/30' };
+      const isBlacklisted = BLACKLIST.some((b) => host.includes(b));
+      if (isBlacklisted) return { label: 'Parcial', color: 'text-amber-400', bg: 'bg-amber-900/20', border: 'border-amber-900/30' };
+      const independentHints = HINT_DOMAINS.length ? HINT_DOMAINS : ['.edu', '.ac.', '.org'];
+      if (independentHints.some(w => host.includes(w))) return { label: 'Independente', color: 'text-emerald-400', bg: 'bg-emerald-900/20', border: 'border-emerald-900/30' };
+      return { label: 'Fonte', color: 'text-zinc-300', bg: 'bg-zinc-800/30', border: 'border-zinc-700/30' };
+    } catch {
+      return { label: 'Fonte', color: 'text-zinc-300', bg: 'bg-zinc-800/30', border: 'border-zinc-700/30' };
+    }
+  };
+
   const handleShare = (e: React.MouseEvent) => {
     e.stopPropagation();
     if (onShare) onShare(result, e);
@@ -113,7 +129,7 @@ export const FactCard: React.FC<FactCardProps> = ({ result, onClick, onShare }) 
       <div className={`bg-black/20 rounded-lg p-3 border border-white/5 ${isPending ? 'animate-pulse' : ''}`}>
         <p className="text-sm text-zinc-300 mb-2 line-clamp-3">{result.explanation}</p>
         
-        {result.status === VerificationStatus.FALSE && result.correction && (
+        {(result.status === VerificationStatus.FALSE || result.status === VerificationStatus.PARTIALLY_TRUE) && result.correction && (
           <div className="mt-2 pt-2 border-t border-white/10">
             <p className="text-sm font-semibold text-emerald-400 flex items-start gap-2">
               <CheckCircle className="w-4 h-4 mt-0.5 shrink-0" />
@@ -128,10 +144,17 @@ export const FactCard: React.FC<FactCardProps> = ({ result, onClick, onShare }) 
           {result.sources.slice(0, 2).map((source, idx) => (
             <div 
               key={idx} 
-              className="flex items-center gap-1 text-xs text-blue-400/80 bg-blue-950/20 px-2 py-1 rounded-md border border-blue-900/30"
+              className="flex items-center gap-1 text-xs px-2 py-1 rounded-md border"
+              style={{}}
             >
               <ExternalLink className="w-3 h-3" />
               <span className="truncate max-w-[150px]">{source.title}</span>
+              {(() => {
+                const c = classifySource(source.uri);
+                return (
+                  <span className={`ml-2 px-1.5 py-0.5 rounded ${c.bg} ${c.border} ${c.color} border text-[10px]`}>{c.label}</span>
+                );
+              })()}
             </div>
           ))}
           {result.sources.length > 2 && (

@@ -1,5 +1,6 @@
 import React from 'react';
 import { FactCheckResult, VerificationStatus } from '../types';
+import { HINT_DOMAINS, GOV_PATTERNS, BLACKLIST } from '../env';
 import { X, Share2, ExternalLink, CheckCircle, XCircle, AlertTriangle, HelpCircle, MessageSquare, Quote } from 'lucide-react';
 
 interface DetailedViewModalProps {
@@ -63,15 +64,30 @@ export const DetailedViewModal: React.FC<DetailedViewModalProps> = ({ result, on
 
   const config = getStatusConfig(result.status);
 
+  const classifySource = (uri: string) => {
+    try {
+      const host = new URL(uri).hostname.toLowerCase();
+      const isGov = GOV_PATTERNS.some((g) => host.includes(g));
+      if (isGov) return { label: 'Oficial', color: 'text-red-400', bg: 'bg-red-900/30', border: 'border-red-900/30' };
+      const isBlacklisted = BLACKLIST.some((b) => host.includes(b));
+      if (isBlacklisted) return { label: 'Parcial', color: 'text-amber-400', bg: 'bg-amber-900/20', border: 'border-amber-900/30' };
+      const independentHints = HINT_DOMAINS.length ? HINT_DOMAINS : ['.edu', '.ac.', '.org'];
+      if (independentHints.some(w => host.includes(w))) return { label: 'Independente', color: 'text-emerald-400', bg: 'bg-emerald-900/20', border: 'border-emerald-900/30' };
+      return { label: 'Fonte', color: 'text-zinc-300', bg: 'bg-zinc-800/30', border: 'border-zinc-700/30' };
+    } catch {
+      return { label: 'Fonte', color: 'text-zinc-300', bg: 'bg-zinc-800/30', border: 'border-zinc-700/30' };
+    }
+  };
+
   return (
     <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 sm:p-6">
-      <div 
-        className="absolute inset-0 bg-black/80 backdrop-blur-sm transition-opacity" 
+      <div
+        className="absolute inset-0 bg-black/80 backdrop-blur-sm transition-opacity"
         onClick={onClose}
       />
-      
+
       <div className={`relative w-full max-w-2xl max-h-[90vh] overflow-y-auto bg-zinc-950 rounded-2xl border ${config.border} shadow-2xl flex flex-col animate-in fade-in zoom-in-95 duration-200`}>
-        
+
         {/* Header Banner */}
         <div className={`sticky top-0 z-10 p-6 ${config.bg} border-b ${config.border} flex items-center justify-between`}>
           <div className="flex items-center gap-4">
@@ -83,7 +99,7 @@ export const DetailedViewModal: React.FC<DetailedViewModalProps> = ({ result, on
               </p>
             </div>
           </div>
-          <button 
+          <button
             onClick={onClose}
             className="p-2 rounded-full hover:bg-black/20 text-zinc-400 hover:text-white transition-colors"
           >
@@ -93,7 +109,7 @@ export const DetailedViewModal: React.FC<DetailedViewModalProps> = ({ result, on
 
         {/* Content */}
         <div className="p-6 space-y-8">
-          
+
           {/* Transcript Section */}
           <div className="space-y-3">
             <div className="flex items-center gap-2 text-zinc-500 mb-2">
@@ -132,14 +148,14 @@ export const DetailedViewModal: React.FC<DetailedViewModalProps> = ({ result, on
               <ExternalLink className="w-4 h-4" />
               Fontes e Evidências
             </h3>
-            
+
             {result.sources.length > 0 ? (
               <div className="grid gap-3 sm:grid-cols-2">
                 {result.sources.map((source, idx) => (
-                  <a 
+                  <a
                     key={idx}
                     href={source.uri}
-                    target="_blank" 
+                    target="_blank"
                     rel="noopener noreferrer"
                     className="group flex flex-col p-3 rounded-lg bg-zinc-900 border border-zinc-800 hover:border-blue-500/50 hover:bg-zinc-800 transition-all duration-200"
                   >
@@ -149,6 +165,12 @@ export const DetailedViewModal: React.FC<DetailedViewModalProps> = ({ result, on
                     <span className="text-xs text-zinc-500 truncate w-full">
                       {source.uri}
                     </span>
+                    {(() => {
+                      const c = classifySource(source.uri);
+                      return (
+                        <span className={`mt-2 self-start px-2 py-0.5 rounded ${c.bg} ${c.border} ${c.color} border text-[10px]`}>{c.label}</span>
+                      );
+                    })()}
                   </a>
                 ))}
               </div>
@@ -162,14 +184,14 @@ export const DetailedViewModal: React.FC<DetailedViewModalProps> = ({ result, on
 
         {/* Footer Actions */}
         <div className="sticky bottom-0 p-4 bg-zinc-950 border-t border-zinc-900 flex justify-end gap-3">
-           <button 
+           <button
              onClick={onShare}
              className="flex items-center gap-2 px-4 py-2 bg-zinc-800 hover:bg-zinc-700 text-zinc-200 rounded-lg font-medium text-sm transition-colors"
            >
              <Share2 className="w-4 h-4" />
              Compartilhar Resultado
            </button>
-           <button 
+           <button
              onClick={onClose}
              className="px-6 py-2 bg-zinc-100 hover:bg-white text-zinc-900 rounded-lg font-bold text-sm transition-colors"
            >
